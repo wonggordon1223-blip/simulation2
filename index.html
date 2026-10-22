@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Van de Graaff Generator & Electric Breakdown Simulation</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #1e1e1e; color: #fff; margin: 0; padding: 20px; }
+        canvas { background: #111; border: 2px solid #444; border-radius: 8px; box-shadow: 0 0 20px rgba(0,255,255,0.2); }
+        .controls { margin-top: 15px; }
+        button { background: #00bcd4; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 4px; margin: 5px; }
+        button:hover { background: #008ba3; }
+        input[type=range] { width: 200px; }
+    </style>
+</head>
+<body>
+    <h2>Electric Breakdown Simulation</h2>
+    <p>Adjust the distance between the Van de Graaff dome and the grounded sphere to observe breakdown.</p>
+    
+    <canvas id="simCanvas" width="800" height="400"></canvas>
+    
+    <div class="controls">
+        <button onclick="toggleGenerator()">Toggle Generator</button>
+        <label>Distance: <span id="distVal">150</span> px</label>
+        <input type="range" id="distRange" min="50" max="300" value="150" oninput="updateDistance(this.value)">
+    </div>
+    <p>Dome Voltage: <span id="voltVal">0</span> kV | Electric Field: <span id="fieldVal">0</span> kV/cm</p>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let isRunning = false;
+        let voltage = 0;
+        let distance = 150; 
+        const breakdownThreshold = 200; 
+
+        function toggleGenerator() {
+            isRunning = !isRunning;
+            if (!isRunning) voltage = 0;
+        }
+
+        function updateDistance(val) {
+            distance = parseInt(val);
+            document.getElementById('distVal').innerText = distance;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (isRunning && voltage < 300) {
+                voltage += 1.5;
+            } else if (!isRunning && voltage > 0) {
+                voltage -= 3;
+            }
+
+            let electricField = voltage / (distance / 50); 
+            document.getElementById('voltVal').innerText = voltage.toFixed(1);
+            document.getElementById('fieldVal').innerText = electricField.toFixed(1);
+
+            // Draw Van de Graaff Dome
+            ctx.beginPath();
+            ctx.arc(200, 200, 60, 0, Math.PI * 2);
+            let grad = ctx.createRadialGradient(190, 190, 10, 200, 200, 60);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(1, '#888888');
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ccc';
+            ctx.stroke();
+
+            // Draw Grounded Sphere
+            let sphereX = 200 + distance + 40;
+            ctx.beginPath();
+            ctx.arc(sphereX, 200, 30, 0, Math.PI * 2);
+            let grad2 = ctx.createRadialGradient(sphereX-5, 195, 5, sphereX, 200, 30);
+            grad2.addColorStop(0, '#aaffff');
+            grad2.addColorStop(1, '#005555');
+            ctx.fillStyle = grad2;
+            ctx.fill();
+            ctx.stroke();
+
+            // Spark Discharge Check
+            if (electricField >= breakdownThreshold && isRunning) {
+                ctx.beginPath();
+                ctx.moveTo(260, 200);
+                let currX = 260;
+                let currY = 200;
+                let targetX = sphereX - 30;
+                while (currX < targetX) {
+                    currX += (targetX - currX) / 4 + (Math.random() * 20 - 10);
+                    currY += (Math.random() * 60 - 30);
+                    ctx.lineTo(currX, currY);
+                }
+                ctx.lineTo(targetX, 200);
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                voltage -= 20;
+                if (voltage < 0) voltage = 0;
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '14px Arial';
+            ctx.fillText("Van de Graaff Dome", 140, 285);
+            ctx.fillText("Grounded Sphere", sphereX - 50, 255);
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
